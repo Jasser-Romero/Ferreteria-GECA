@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'ventas'
 ]
+# --- Configuración de usuario (Pendiente)---
+# AUTH_USER_MODEL = 'ventas.Usuario'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -212,54 +212,55 @@ class CompraDetalle(models.Model):
         # Recalcular totales de la compra
         compra.recalcular_totales(save=True)
 
+#todo: esta logica se hara después de la migracion del modelo de la bd
 #Manejo de Usuarios en el Sistema
-class Usuario(AbstractUser):
-    ROL_CHOICES = [
-        ('admin', 'Administrador'),
-        ('vendedor', 'Vendedor'),
-    ]
-    rol = models.CharField(max_length=10, choices=ROL_CHOICES, default='vendedor')
+# class Usuario(AbstractUser):
+#     ROL_CHOICES = [
+#         ('admin', 'Administrador'),
+#         ('vendedor', 'Vendedor'),
+#     ]
+#     rol = models.CharField(max_length=10, choices=ROL_CHOICES, default='vendedor')
 
-    def __str__(self):
-        return f"{self.username} ({self.get_rol_display()})"
+#     def __str__(self):
+#         return f"{self.username} ({self.get_rol_display()})"
     
-# --- Creación automática de grupos y usuarios al migrar ---
-@receiver(post_migrate)
-def crear_grupos_y_usuarios(sender, **kwargs):
-    """
-    Crea los grupos (Administrador y Vendedor) y los usuarios iniciales si no existen.
-    Se ejecuta automáticamente después de cada migrate.
-    """
-    if sender.name == 'app':  # reemplaza 'app' por el nombre de tu aplicación Django
-        # Crear grupos
-        admin_group, _ = Group.objects.get_or_create(name='Administrador')
-        vendedor_group, _ = Group.objects.get_or_create(name='Vendedor')
+# # --- Creación automática de grupos y usuarios al migrar ---
+# @receiver(post_migrate)
+# def crear_grupos_y_usuarios(sender, **kwargs):
+#     """
+#     Crea los grupos (Administrador y Vendedor) y los usuarios iniciales si no existen.
+#     Se ejecuta automáticamente después de cada migrate.
+#     """
+#     if sender.label != 'ventas':  
+#         # Crear grupos
+#         admin_group, _ = Group.objects.get_or_create(name='Administrador')
+#         vendedor_group, _ = Group.objects.get_or_create(name='Vendedor')
 
-        # Crear usuarios administrador
-        for username, password in [('GermanB', 'Admin123+'), ('CarmenB', 'Admin123+')]:
-            if not Usuario.objects.filter(username=username).exists():
-                user = Usuario.objects.create_superuser(
-                    username=username,
-                    password=password,
-                    email=f'{username.lower()}@correo.com',
-                    rol='admin',
-                    is_staff=True,
-                    is_superuser=True
-                )
-                user.groups.add(admin_group)
-                print(f"✅ Usuario administrador creado: {username}")
+#         # Crear usuarios administrador
+#         for username, password in [('GermanB', 'Admin123+'), ('CarmenB', 'Admin123+')]:
+#             if not Usuario.objects.filter(username=username).exists():
+#                 user = Usuario.objects.create_superuser(
+#                     username=username,
+#                     password=password,
+#                     email=f'{username.lower()}@correo.com',
+#                     rol='admin',
+#                     is_staff=True,
+#                     is_superuser=True
+#                 )
+#                 user.groups.add(admin_group)
+#                 print(f"✅ Usuario administrador creado: {username}")
 
-        # Crear usuario vendedor
-        if not Usuario.objects.filter(username='JuanP').exists():
-            vendedor = Usuario.objects.create_user(
-                username='JuanP',
-                password='Vendedor123+',
-                email='juanp@correo.com',
-                rol='vendedor',
-                is_staff=False,
-                is_superuser=False
-            )
-            vendedor.groups.add(vendedor_group)
-            print("✅ Usuario vendedor creado: JuanP")
+#         # Crear usuario vendedor
+#         if not Usuario.objects.filter(username='JaysonH').exists():
+#             vendedor = Usuario.objects.create_user(
+#                 username='JaysonH',
+#                 password='Vendedor123+',
+#                 email='jaysonH@correo.com',
+#                 rol='vendedor',
+#                 is_staff=False,
+#                 is_superuser=False
+#             )
+#             vendedor.groups.add(vendedor_group)
+#             print("✅ Usuario vendedor creado: JaysonH")
 
 # todo: agregar los permisos de tablas a los grupos de usuarios (admin, vendedor)
