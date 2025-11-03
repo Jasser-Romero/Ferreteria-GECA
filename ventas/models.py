@@ -106,28 +106,23 @@ class VentaDetalle(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        # 1) Precio por defecto y Subtotal
         if self.PrecioUnitario is None:
             self.PrecioUnitario = self.Producto.Precio
         self.SubTotal = (Decimal(self.CantidadVendida) * self.PrecioUnitario).quantize(Decimal('0.01'))
 
-        # 2) Verifica si es creación o edición
         old = None
         if self.pk:
             old = type(self).objects.select_related('Producto').get(pk=self.pk)
 
         super().save(*args, **kwargs)
 
-        # 3) Ajuste inventario (disminucion de stock)
         if old is None:
-            # Creación: restar todo
             prod = Producto.objects.select_for_update().get(pk=self.Producto_id)
             if (prod.Existencia or 0) - self.CantidadVendida < 0:
                 raise ValidationError("No hay stock suficiente para realizar la venta.")
             Producto.objects.filter(pk=prod.pk).update(Existencia=F('Existencia') - self.CantidadVendida)
         else:
             if old.Producto_id != self.Producto_id:
-                # Cambió de producto: devolver en el viejo y descontar en el nuevo
                 prod_old = Producto.objects.select_for_update().get(pk=old.Producto_id)
                 Producto.objects.filter(pk=prod_old.pk).update(Existencia=F('Existencia') + old.CantidadVendida)
 
@@ -136,16 +131,13 @@ class VentaDetalle(models.Model):
                     raise ValidationError("No hay stock suficiente para cambiar el producto en la venta.")
                 Producto.objects.filter(pk=prod_new.pk).update(Existencia=F('Existencia') - self.CantidadVendida)
             else:
-                # Mismo producto: aplicar delta
                 delta = self.CantidadVendida - old.CantidadVendida
                 if delta != 0:
                     prod = Producto.objects.select_for_update().get(pk=self.Producto_id)
                     if delta > 0 and (prod.Existencia or 0) - delta < 0:
                         raise ValidationError("No hay stock suficiente para aumentar la cantidad vendida.")
-                    # delta > 0 resta; delta < 0 suma
                     Producto.objects.filter(pk=prod.pk).update(Existencia=F('Existencia') - delta)
 
-        # 4) Recalcular total
         self.Venta.recalcular_total(save=True)
 
 class Compra(models.Model):
@@ -193,24 +185,19 @@ class CompraDetalle(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        # 1) Subtotal exacto
         self.SubTotalDC = (Decimal(self.CantidadC) * self.PrecioC).quantize(Decimal('0.01'))
 
-        # 2) Verifica si es creación o edición
         old = None
         if self.pk:
             old = type(self).objects.select_related('Producto').get(pk=self.pk)
 
         super().save(*args, **kwargs)
 
-        # 3) Ajuste inventario (aumenta stock)
         if old is None:
-            # Creación: sumar todo
             prod = Producto.objects.select_for_update().get(pk=self.Producto_id)
             Producto.objects.filter(pk=prod.pk).update(Existencia=F('Existencia') + self.CantidadC)
         else:
             if old.Producto_id != self.Producto_id:
-                # Cambió de producto: restar en el viejo (revertir) y sumar en el nuevo
                 prod_old = Producto.objects.select_for_update().get(pk=old.Producto_id)
                 if (prod_old.Existencia or 0) - old.CantidadC < 0:
                     raise ValidationError("No hay stock suficiente para revertir en el producto anterior.")
@@ -219,16 +206,13 @@ class CompraDetalle(models.Model):
                 prod_new = Producto.objects.select_for_update().get(pk=self.Producto_id)
                 Producto.objects.filter(pk=prod_new.pk).update(Existencia=F('Existencia') + self.CantidadC)
             else:
-                # Mismo producto: aplicar delta
                 delta = self.CantidadC - old.CantidadC
                 if delta != 0:
                     prod = Producto.objects.select_for_update().get(pk=self.Producto_id)
-                    # delta > 0 suma; delta < 0 resta (validar que no quede negativo)
                     if delta < 0 and (prod.Existencia or 0) + delta < 0:
                         raise ValidationError("No hay stock suficiente para disminuir la cantidad comprada.")
                     Producto.objects.filter(pk=prod.pk).update(Existencia=F('Existencia') + delta)
 
-        # 4) Recalcular totales
         self.Compra.recalcular_totales(save=True)
         
 #todo: esta logica se hara después de la migracion del modelo de la bd
@@ -267,7 +251,7 @@ class CompraDetalle(models.Model):
 #                     is_superuser=True
 #                 )
 #                 user.groups.add(admin_group)
-#                 print(f"✅ Usuario administrador creado: {username}")
+#                 print(f"Usuario administrador creado: {username}")
 
 #         # Crear usuario vendedor
 #         if not Usuario.objects.filter(username='JaysonH').exists():
@@ -280,6 +264,6 @@ class CompraDetalle(models.Model):
 #                 is_superuser=False
 #             )
 #             vendedor.groups.add(vendedor_group)
-#             print("✅ Usuario vendedor creado: JaysonH")
+#             print("Usuario vendedor creado: JaysonH")
 
 # todo: agregar los permisos de tablas a los grupos de usuarios (admin, vendedor)
