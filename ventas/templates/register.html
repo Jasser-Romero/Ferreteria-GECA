@@ -12,15 +12,12 @@
   <body>
     <div class="container mt-5">
       <h2 class="mb-4">Registro de Usuario</h2>
-
-      <!-- Mensajes de Django -->
       {% if messages %} {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">{{ message }}</div>
       {% endfor %} {% endif %}
 
       <form method="POST">
         {% csrf_token %} {{ form.as_p }}
-        <!-- Django genera automáticamente los campos -->
         <button type="submit" class="btn btn-primary">Registrarse</button>
       </form>
 

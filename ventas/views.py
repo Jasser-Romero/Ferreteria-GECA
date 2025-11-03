@@ -1,6 +1,9 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import AuthenticationForm
+
 
 # Create your views here.
 def index(request):
@@ -16,7 +19,7 @@ def user_login(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Bienvenido {username}')
-                return redirect('index')  # vuelve a la página principal
+                return redirect('index')
             else:
                 messages.error(request, 'Usuario o contraseña incorrectos')
         else:
@@ -24,3 +27,6 @@ def user_login(request):
     else:
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
+
+def user_register(request):
+    return render(request, 'register.html')
