@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 
-from .models import Cliente, Proveedor
+from .models import Cliente, Proveedor, Marca, Categoria
 
 
 # Create your views here.
@@ -46,6 +46,116 @@ def user_logout(request):
 @login_required
 def productos_lista(request):
     return render(request, "productos.html")
+
+@login_required
+def marca_lista(request):
+    marcas = Marca.objects.filter(Activo=True).order_by('Id_Marca')
+    edit_mode = False
+    marca_edit = None
+    nombre_valor = ""
+
+    # ELIMINAR (SOFT DELETE: Activo = False)
+    if request.method == 'POST' and 'eliminar_id' in request.POST:
+        marca = get_object_or_404(Marca, pk=request.POST.get('eliminar_id'))
+        marca.Activo = False
+        marca.save()
+        messages.success(request, 'Marca eliminada correctamente.')
+        return redirect('marca_lista')
+
+    # CREAR / ACTUALIZAR
+    if request.method == 'POST' and 'eliminar_id' not in request.POST:
+        marca_id = request.POST.get('marca_id')
+        nombre = request.POST.get('NombreMarca', '').strip()
+
+        if not nombre:
+            messages.error(request, 'El nombre de la marca es requerido.')
+
+            if marca_id:
+                marca_edit = get_object_or_404(Marca, pk=marca_id)
+                edit_mode = True
+                nombre_valor = ""  # deja vacío para que el usuario vuelva a escribir
+            else:
+                nombre_valor = ""  # creación con error
+        else:
+            if marca_id:
+                marca = get_object_or_404(Marca, pk=marca_id)
+                marca.NombreMarca = nombre
+                marca.save()
+                messages.success(request, 'Marca actualizada correctamente.')
+            else:
+                Marca.objects.create(NombreMarca=nombre, Activo=True)
+                messages.success(request, 'Marca registrada correctamente.')
+            return redirect('marca_lista')
+    else:
+        editar_id = request.GET.get('editar')
+        if editar_id:
+            marca_edit = get_object_or_404(Marca, pk=editar_id)
+            edit_mode = True
+            nombre_valor = marca_edit.NombreMarca
+
+    context = {
+        'marcas': marcas,
+        'edit_mode': edit_mode,
+        'marca_edit': marca_edit,
+        'nombre_valor': nombre_valor,
+    }
+    return render(request, "marcas.html", context)
+
+
+@login_required
+def categoria_lista(request):
+    categorias = Categoria.objects.filter(Activo=True).order_by('Id_Categoria')
+    edit_mode = False
+    categoria_edit = None
+    nombre_valor = ""
+
+    # ELIMINAR (SOFT DELETE: Activo = False)
+    if request.method == 'POST' and 'eliminar_id' in request.POST:
+        categoria = get_object_or_404(Categoria, pk=request.POST.get('eliminar_id'))
+        categoria.Activo = False
+        categoria.save()
+        messages.success(request, 'Categoría eliminada correctamente.')
+        return redirect('categoria_lista')
+
+    # CREAR / ACTUALIZAR
+    if request.method == 'POST' and 'eliminar_id' not in request.POST:
+        categoria_id = request.POST.get('categoria_id')
+        nombre = request.POST.get('NombreCategoria', '').strip()
+
+        if not nombre:
+            messages.error(request, 'El nombre de la categoría es requerido.')
+
+            if categoria_id:
+                categoria_edit = get_object_or_404(Categoria, pk=categoria_id)
+                edit_mode = True
+                nombre_valor = ""
+            else:
+                nombre_valor = ""
+        else:
+            if categoria_id:
+                categoria = get_object_or_404(Categoria, pk=categoria_id)
+                categoria.NombreCategoria = nombre
+                categoria.save()
+                messages.success(request, 'Categoría actualizada correctamente.')
+            else:
+                Categoria.objects.create(NombreCategoria=nombre, Activo=True)
+                messages.success(request, 'Categoría registrada correctamente.')
+            return redirect('categoria_lista')
+    else:
+        editar_id = request.GET.get('editar')
+        if editar_id:
+            categoria_edit = get_object_or_404(Categoria, pk=editar_id)
+            edit_mode = True
+            nombre_valor = categoria_edit.NombreCategoria
+
+    context = {
+        'categorias': categorias,
+        'edit_mode': edit_mode,
+        'categoria_edit': categoria_edit,
+        'nombre_valor': nombre_valor,
+    }
+    return render(request, "categorias.html", context)
+
 
 class ProveedorForm(forms.ModelForm):
     class Meta:

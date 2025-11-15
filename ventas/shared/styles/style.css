@@ -79,3 +79,18 @@ body {
     background-color: #00326b;
     border-color: #00326b;
 }
+
+/*Menu desplegable Productos*/
+.submenu {
+    display: none;
+    padding-left: 2rem;
+}
+
+.nav-item.dropdown:hover .submenu {
+    display: block;
+}
+
+.submenu a:hover {
+    background-color: #f2f4f7;
+    border-radius: 6px;
+}

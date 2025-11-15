@@ -1,0 +1,106 @@
+{% extends 'layout.html' %}
+{% block title %}Categorias{% endblock %}
+{% block page_title %}Categorias{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                {% if edit_mode %}
+                    Editar categoría
+                {% else %}
+                    Registrar categoría
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if edit_mode and categoria_edit %}
+                        <input type="hidden" name="categoria_id" value="{{ categoria_edit.Id_Categoria }}">
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label" for="NombreCategoria">
+                            Nombre de la categoría
+                        </label>
+                        <input
+                            type="text"
+                            id="NombreCategoria"
+                            name="NombreCategoria"
+                            class="form-control"
+                            required
+                            value="{{ nombre_valor }}"
+                        >
+                        <div class="form-text">Este campo es obligatorio.</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        {% if edit_mode %}Actualizar{% else %}Guardar{% endif %}
+                    </button>
+
+                    {% if edit_mode %}
+                        <a href="{% url 'categoria_lista' %}" class="btn btn-secondary ms-2">
+                            Cancelar
+                        </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Lista de categorías
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Nombre de la categoría</th>
+                                <th scope="col" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for categoria in categorias %}
+                                <tr>
+                                    <td>{{ categoria.Id_Categoria }}</td>
+                                    <td>{{ categoria.NombreCategoria }}</td>
+                                    <td class="text-center">
+                                        <a href="{% url 'categoria_lista' %}?editar={{ categoria.Id_Categoria }}"
+                                           class="btn btn-sm btn-outline-secondary me-1">
+                                            Editar
+                                        </a>
+
+                                        <form method="post" style="display:inline;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="eliminar_id" value="{{ categoria.Id_Categoria }}">
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('¿Seguro que deseas eliminar esta categoría?');">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        No hay categorías registradas.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
