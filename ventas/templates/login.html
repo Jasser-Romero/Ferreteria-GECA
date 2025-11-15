@@ -16,8 +16,6 @@
 
     <div class="login-wrapper">
         <div class="login-card">
-
-            {# solo mostramos errores / info aquí, no el “Bienvenido” #}
             {% if messages %}
                 {% for message in messages %}
                     {% if message.tags != 'success' %}
