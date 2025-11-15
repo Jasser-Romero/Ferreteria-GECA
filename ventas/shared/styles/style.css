@@ -1,0 +1,81 @@
+body {
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(180deg, #f3f6fb 0%, #e3ebf7 40%, #f5f7fb 100%);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    background-color: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    padding: 28px 24px 24px;
+}
+
+.login-logo {
+    width: 70px;
+    height: auto;
+    margin-bottom: 4px;
+}
+
+.login-brand {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #00408f;
+    margin-bottom: 10px;
+}
+
+.login-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    margin-bottom: 22px;
+    color: #111827;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #111827;
+}
+
+.form-control {
+    border-radius: 9px;
+    border: 1.7px solid #b3c2dd;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+.form-control:focus {
+    border-color: #00408f;
+    box-shadow: 0 0 0 0.18rem rgba(0, 64, 143, 0.18);
+}
+
+.btn-login {
+    background-color: #00408f;
+    border-color: #00408f;
+    border-radius: 9px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.9px;
+    padding: 0.6rem 0;
+    color: #ffffff !important;
+}
+
+.btn-login:hover {
+    background-color: #00326b;
+    border-color: #00326b;
+}

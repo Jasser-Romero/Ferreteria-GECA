@@ -17,6 +17,13 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+# todo: para que reconozca los archivos de imgs y styles
+STATIC_URL = '/shared/'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'ventas', 'shared'),
+]
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 

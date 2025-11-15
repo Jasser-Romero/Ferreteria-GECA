@@ -12,6 +12,9 @@ def index(request):
     return render(request, 'index.html')
 
 def user_login(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -21,7 +24,7 @@ def user_login(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Bienvenido {username}')
-                return redirect('index')
+                return redirect('dashboard')
             else:
                 messages.error(request, 'Usuario o contraseña incorrectos')
         else:

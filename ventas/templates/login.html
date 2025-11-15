@@ -1,6 +1,70 @@
-{% extends 'layout.html' %}
-{% block title %}Login{% endblock %}
-{% block page_title %}Login{% endblock %}
-{% block content %}
-    
-{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'styles/style.css' %}">
+</head>
+<body>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+
+            {# solo mostramos errores / info aquí, no el “Bienvenido” #}
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags != 'success' %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            <img src="{% static 'imgs/logo-geca.png' %}" alt="GECA" class="login-logo">
+            <div class="login-title">INICIAR SESIÓN</div>
+
+            <form method="POST" novalidate class="text-start">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">Usuario</label>
+                    <input
+                        type="text"
+                        name="username"
+                        id="id_username"
+                        class="form-control"
+                        required
+                        autofocus
+                    />
+                </div>
+
+                <div class="mb-4">
+                    <label for="id_password" class="form-label">Contraseña</label>
+                    <input
+                        type="password"
+                        name="password"
+                        id="id_password"
+                        class="form-control"
+                        required
+                    />
+                </div>
+
+                <button type="submit" class="btn btn-login w-100">
+                    ACCEDER
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
