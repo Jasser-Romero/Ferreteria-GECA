@@ -1,0 +1,79 @@
+{% extends 'layout.html' %}
+{% block title %}Registrar Clientes{% endblock %}
+{% block page_title %}Registrar Cliente{% endblock %}
+{% block content %}
+<!-- Formulario de registro/edición -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                {% if edit_mode %}
+                    Editar Cliente
+                {% else %}
+                    Registrar Cliente
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if edit_mode and cliente_edit %}
+                        <input type="hidden" name="cliente_id" value="{{ cliente_edit.Id_Cliente }}">
+                    {% endif %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.PrimerNombre.id_for_label }}">Primer Nombre</label>
+                        {{ form.PrimerNombre }}
+                        {% for error in form.PrimerNombre.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.SegundoNombre.id_for_label }}">Segundo Nombre</label>
+                        {{ form.SegundoNombre }}
+                        {% for error in form.SegundoNombre.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.PrimerApellido.id_for_label }}">Primer Apellido</label>
+                        {{ form.PrimerApellido }}
+                        {% for error in form.PrimerApellido.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.SegundoApellido.id_for_label }}">Segundo Apellido</label>
+                        {{ form.SegundoApellido }}
+                        {% for error in form.SegundoApellido.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.Activo }}
+                        <label class="form-check-label" for="{{ form.Activo.id_for_label }}">Activo</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        {% if edit_mode %}Actualizar{% else %}Guardar{% endif %}
+                    </button>
+
+                    {% if edit_mode %}
+                        <a href="{% url 'clientes_lista' %}" class="btn btn-secondary ms-2">Cancelar</a>
+                    {% else %}
+                        <a href="{% url 'clientes_lista' %}" class="btn btn-secondary ms-2">Volver</a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

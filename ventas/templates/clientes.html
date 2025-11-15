@@ -1,6 +1,78 @@
 {% extends 'layout.html' %}
-{% block title %}Login{% endblock %}
+{% block title %}Clientes{% endblock %}
 {% block page_title %}Clientes{% endblock %}
 {% block content %}
+<div class="row">
     
+    <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
+    <!-- Icono a la izquierda -->
+    <i class="bi bi-person-fill" style="font-size: 4rem; color: #202020; margin-left: 2rem;"></i>
+
+    <!-- Botón a la derecha -->
+    <a href="{% url 'clientes_registrar' %}" class="btn btn-primary" style="margin-right: 2rem;">
+        <i class="bi bi-person-plus me-1" style="font-size: 1rem;"></i>Registrar nuevo cliente
+    </a>
+</div>
+
+    <!-- Lista de clientes -->
+    <div class="col-12 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                Lista de clientes
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Primer Nombre</th>
+                                <th scope="col">Segundo Nombre</th>
+                                <th scope="col">Primer Apellido</th>
+                                <th scope="col">Segundo Apellido</th>
+                                <th scope="col" class="text-center">Activo</th>
+                                <th scope="col" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cliente in clientes %}
+                                <tr>
+                                    <td>{{ cliente.Id_Cliente }}</td>
+                                    <td>{{ cliente.PrimerNombre }}</td>
+                                    <td>{{ cliente.SegundoNombre }}</td>
+                                    <td>{{ cliente.PrimerApellido }}</td>
+                                    <td>{{ cliente.SegundoApellido }}</td>
+                                    <td class="text-center">
+                                        {% if cliente.Activo %}Sí{% else %}No{% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'clientes_registrar' %}?editar={{ cliente.Id_Cliente }}"
+                                            class="btn btn-sm btn-outline-secondary me-1">
+                                            Editar
+                                        </a>
+
+                                        <form method="post" style="display:inline;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="eliminar_id" value="{{ cliente.Id_Cliente }}">
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('¿Seguro que deseas eliminar este cliente?');">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No hay clientes registrados.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
 {% endblock %}

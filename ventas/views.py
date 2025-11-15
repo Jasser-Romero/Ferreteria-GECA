@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 
-from .models import Proveedor
+from .models import Cliente, Proveedor
 
 
 # Create your views here.
@@ -125,3 +125,104 @@ def clientes_lista(request):
 @login_required
 def ventas_lista(request):
     return render(request, "ventas.html")
+
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = Cliente
+        fields = ['PrimerNombre', 'SegundoNombre', 'PrimerApellido', 'SegundoApellido', 'Activo']
+        widgets = {
+            'PrimerNombre': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'SegundoNombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'PrimerApellido': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'SegundoApellido': forms.TextInput(attrs={'class': 'form-control'}),
+            'Activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'PrimerNombre': 'Primer Nombre',
+            'SegundoNombre': 'Segundo Nombre',
+            'PrimerApellido': 'Primer Apellido',
+            'SegundoApellido': 'Segundo Apellido',
+            'Activo': 'Activo',
+        }
+
+@login_required
+def clientes_lista(request):
+    clientes = Cliente.objects.all().order_by('Id_Cliente')
+    cliente_edit = None
+    edit_mode = False
+
+    # ELIMINAR
+    if request.method == 'POST' and 'eliminar_id' in request.POST:
+        cliente = get_object_or_404(Cliente, pk=request.POST.get('eliminar_id'))
+        cliente.delete()
+        messages.success(request, 'Cliente eliminado correctamente.')
+        return redirect('clientes_lista')
+
+    # CREAR / ACTUALIZAR
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente_id')
+
+        if cliente_id:
+            cliente_edit = get_object_or_404(Cliente, pk=cliente_id)
+            form = ClienteForm(request.POST, instance=cliente_edit)
+            edit_mode = True
+        else:
+            form = ClienteForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            if edit_mode:
+                messages.success(request, 'Cliente actualizado correctamente.')
+            else:
+                messages.success(request, 'Cliente creado correctamente.')
+            return redirect('clientes_lista')
+        else:
+            messages.error(request, 'Por favor corrige los errores del formulario.')
+    else:
+        editar_id = request.GET.get('editar')
+        if editar_id:
+            cliente_edit = get_object_or_404(Cliente, pk=editar_id)
+            form = ClienteForm(instance=cliente_edit)
+            edit_mode = True
+        else:
+            form = ClienteForm()
+
+    context = {
+        'form': form,
+        'clientes': clientes,
+        'edit_mode': edit_mode,
+        'cliente_edit': cliente_edit,
+    }
+    return render(request, "clientes.html", context)
+
+@login_required
+def clientes_registrar(request):
+    cliente_edit = None
+    edit_mode = False
+
+    editar_id = request.GET.get('editar')  # Captura si se quiere editar
+    if editar_id:
+        cliente_edit = get_object_or_404(Cliente, pk=editar_id)
+        form = ClienteForm(request.POST or None, instance=cliente_edit)
+        edit_mode = True
+    else:
+        form = ClienteForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            if edit_mode:
+                messages.success(request, 'Cliente actualizado correctamente.')
+            else:
+                messages.success(request, 'Cliente creado correctamente.')
+            return redirect('clientes_lista')
+        else:
+            messages.error(request, 'Por favor corrige los errores del formulario.')
+
+    context = {
+        'form': form,
+        'edit_mode': edit_mode,
+        'cliente_edit': cliente_edit,
+    }
+    return render(request, 'clientes_registrar.html', context)
+
