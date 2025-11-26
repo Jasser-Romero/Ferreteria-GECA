@@ -91,6 +91,16 @@ body {
 }
 
 .submenu a:hover {
-    background-color: #f2f4f7;
+    background-color: #f2f2f2;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+nav.flex-grow-1 a.nav-link {
+    transition: background-color 0.2s ease;
+}
+
+nav.flex-grow-1 a.nav-link:hover {
+    background-color: #f2f2f2;
     border-radius: 6px;
 }
