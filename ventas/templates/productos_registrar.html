@@ -1,0 +1,260 @@
+{% extends 'layout.html' %}
+{% block title %}Registrar Productos{% endblock %}
+{% block page_title %}Registrar Productos{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Ancho alineado al sidebar -->
+        <div class="col-lg-10 col-xl-8">
+
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        {% if producto %}
+                            Editar Producto #{{ producto.Id_Producto }}
+                        {% else %}
+                            Registrar nuevo producto
+                        {% endif %}
+                    </span>
+                    <a href="{% url 'productos_lista' %}" class="btn btn-sm btn-outline-secondary">
+                        Volver a la lista
+                    </a>
+                </div>
+
+                <div class="card-body">
+                    {# Mensaje de error del lado del navegador (validación JS/HTML5) #}
+                    <div id="formError" class="alert alert-danger py-2 px-3 d-none">
+                        Debe completar correctamente todos los campos obligatorios.
+                    </div>
+
+                    <form method="POST" id="productoForm" novalidate>
+                        {% csrf_token %}
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre del Producto</label>
+                                <input type="text"
+                                       name="NombreProducto"
+                                       class="form-control"
+                                       maxlength="50"
+                                       value="{{ producto.NombreProducto|default_if_none:'' }}"
+                                       required>
+                                <div class="invalid-feedback">
+                                    Ingrese el nombre del producto.
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Existencia</label>
+                                <input type="text"
+                                       name="Existencia"
+                                       class="form-control"
+                                       inputmode="numeric"
+                                       maxlength="5"
+                                       value="{{ producto.Existencia|default_if_none:0 }}"
+                                       required>
+                                <div class="invalid-feedback">
+                                    Ingrese una existencia válida (solo números).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea name="Descripcion"
+                                      class="form-control"
+                                      maxlength="200"
+                                      rows="3"
+                                      required>{{ producto.Descripcion|default_if_none:'' }}</textarea>
+                            <div class="invalid-feedback">
+                                Ingrese una descripción del producto.
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Precio</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">C$</span>
+                                    <input type="text"
+                                           name="Precio"
+                                           class="form-control"
+                                           maxlength="15"
+                                           inputmode="decimal"
+                                           value="{{ producto.Precio|default_if_none:'' }}"
+                                           required>
+                                    <div class="invalid-feedback">
+                                        Ingrese un precio válido (solo números y un decimal, máximo 15 dígitos).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Marca</label>
+                                <select name="Marca" class="form-select select2" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for item in marcas %}
+                                        <option value="{{ item.Id_Marca }}"
+                                            {% if producto and producto.Marca.Id_Marca == item.Id_Marca %}selected{% endif %}>
+                                            {{ item.NombreMarca }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleccione una marca.
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Categoría</label>
+                                <select name="Categoria" class="form-select select2" required>
+                                    <option value="">Seleccione...</option>
+                                    {% for item in categorias %}
+                                        <option value="{{ item.Id_Categoria }}"
+                                            {% if producto and producto.Categoria.Id_Categoria == item.Id_Categoria %}selected{% endif %}>
+                                            {{ item.NombreCategoria }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Seleccione una categoría.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Proveedor</label>
+                            <select name="Proveedor" class="form-select select2" required>
+                                <option value="">Seleccione...</option>
+                                {% for item in proveedores %}
+                                    <option value="{{ item.Id_Proveedor }}"
+                                        {% if producto and producto.Proveedor.Id_Proveedor == item.Id_Proveedor %}selected{% endif %}>
+                                        {{ item.NombreEmpresa }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Seleccione un proveedor.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                {% if producto %}Actualizar Producto{% else %}Guardar Producto{% endif %}
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Select2 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        // Inicializar Select2
+        $('.select2').select2({
+            width: '100%',
+            placeholder: 'Seleccione...',
+            allowClear: true
+        });
+
+        const form = document.getElementById('productoForm');
+        const errorBox = document.getElementById('formError');
+        const existenciaInput = form.querySelector('input[name="Existencia"]');
+        const precioInput = form.querySelector('input[name="Precio"]');
+
+        // Solo números en Existencia
+        existenciaInput.addEventListener('keydown', function (e) {
+            const allowedKeys = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Home', 'End'];
+            if (allowedKeys.includes(e.key)) return;
+
+            if (!/^\d$/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        // Asegurar que solo queden dígitos en Existencia (por si pegan texto)
+        existenciaInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '');
+        });
+
+        // Solo números y un punto en Precio, sin + ni -
+        precioInput.addEventListener('keydown', function (e) {
+            const allowedKeys = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Home', 'End'];
+            if (allowedKeys.includes(e.key)) return;
+
+            // Bloquear + y -
+            if (['+', '-'].includes(e.key)) {
+                e.preventDefault();
+                return;
+            }
+
+            // Dígitos
+            if (/^\d$/.test(e.key)) return;
+
+            // Punto decimal (solo uno)
+            if (e.key === '.') {
+                if (this.value.includes('.')) {
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            // Todo lo demás, bloquear
+            e.preventDefault();
+        });
+
+        // Limpiar lo pegado en Precio y limitar a 15 dígitos (sin contar el punto)
+        precioInput.addEventListener('input', function () {
+            // Solo dígitos y punto
+            let v = this.value.replace(/[^0-9.]/g, '');
+
+            // Solo un punto
+            const parts = v.split('.');
+            if (parts.length > 2) {
+                v = parts[0] + '.' + parts.slice(1).join('');
+            }
+
+            // Limitar a 15 dígitos numéricos
+            const numericPart = v.replace('.', '');
+            if (numericPart.length > 15) {
+                let trimmedNumeric = numericPart.slice(0, 15);
+                if (v.includes('.')) {
+                    const pointIndex = v.indexOf('.');
+                    let left = trimmedNumeric.slice(0, Math.min(pointIndex, trimmedNumeric.length));
+                    let right = trimmedNumeric.slice(left.length);
+                    v = left + (right.length > 0 ? '.' + right : '');
+                } else {
+                    v = trimmedNumeric;
+                }
+            }
+
+            this.value = v;
+        });
+
+        // Validación general al enviar
+        form.addEventListener('submit', function (event) {
+            errorBox.classList.add('d-none');
+
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                errorBox.classList.remove('d-none');
+            }
+
+            form.classList.add('was-validated');
+        }, false);
+    });
+</script>
+
+{% endblock %}

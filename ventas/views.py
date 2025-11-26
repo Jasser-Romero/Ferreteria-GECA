@@ -1,12 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
+from django.urls import reverse
+from django.utils.http import urlencode
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 
-from .models import Cliente, Proveedor, Marca, Categoria
+from .models import Cliente, Proveedor, Marca, Categoria, Producto
 
 
 # Create your views here.
@@ -45,7 +47,98 @@ def user_logout(request):
 
 @login_required
 def productos_lista(request):
-    return render(request, "productos.html")
+    # Leer mensaje de éxito desde la sesión (y eliminarlo)
+    mensaje_exito = request.session.pop('mensaje_exito', None)
+
+    # Eliminar producto (POST)
+    if request.method == "POST" and "eliminar_id" in request.POST:
+        eliminar_id = request.POST.get("eliminar_id")
+        try:
+            producto = Producto.objects.get(Id_Producto=eliminar_id)
+            producto.delete()
+            request.session['mensaje_exito'] = "Producto eliminado correctamente."
+        except Producto.DoesNotExist:
+            pass
+
+        return redirect("productos_lista")
+
+    # Obtener todos los productos ordenados
+    productos = (
+        Producto.objects
+        .select_related("Marca", "Categoria", "Proveedor")
+        .order_by("Id_Producto")
+    )
+
+    return render(request, "productos.html", {
+        "productos": productos,
+        "mensaje_exito": mensaje_exito,  # se pasa al template
+    })
+
+@login_required
+def productos_registrar(request):
+    producto = None
+    editar_id = request.GET.get("editar")
+
+    if editar_id:
+        producto = get_object_or_404(Producto, Id_Producto=editar_id)
+
+    if request.method == "POST":
+        nombre = request.POST.get("NombreProducto")
+        descripcion = request.POST.get("Descripcion")
+        existencia = request.POST.get("Existencia")
+        precio = request.POST.get("Precio")
+        marca_id = request.POST.get("Marca")
+        categoria_id = request.POST.get("Categoria")
+        proveedor_id = request.POST.get("Proveedor")
+
+        # Validación básica por si acaso (además de la del front)
+        if not (nombre and descripcion and existencia and precio and marca_id and categoria_id and proveedor_id):
+            # NO usamos mensaje_exito / mensaje_error aquí
+            return render(request, "productos_registrar.html", {
+                "producto": producto,
+                "marcas": Marca.objects.filter(Activo=True),
+                "categorias": Categoria.objects.filter(Activo=True),
+                "proveedores": Proveedor.objects.all(),
+            })
+
+        if producto:
+            # Actualizar
+            producto.NombreProducto = nombre
+            producto.Descripcion = descripcion
+            producto.Existencia = existencia
+            producto.Precio = precio
+            producto.Marca_id = marca_id
+            producto.Categoria_id = categoria_id
+            producto.Proveedor_id = proveedor_id
+            producto.save()
+
+            # Guardar mensaje de éxito en sesión
+            request.session['mensaje_exito'] = "Producto actualizado correctamente."
+        else:
+            # Crear
+            Producto.objects.create(
+                NombreProducto=nombre,
+                Descripcion=descripcion,
+                Existencia=existencia,
+                Precio=precio,
+                Marca_id=marca_id,
+                Categoria_id=categoria_id,
+                Proveedor_id=proveedor_id
+            )
+
+            request.session['mensaje_exito'] = "Producto creado correctamente."
+
+        # Redirigir SIEMPRE a la lista
+        return redirect("productos_lista")
+
+    # GET normal
+    return render(request, "productos_registrar.html", {
+        "producto": producto,
+        "marcas": Marca.objects.filter(Activo=True),
+        "categorias": Categoria.objects.filter(Activo=True),
+        "proveedores": Proveedor.objects.all(),
+    })
+
 
 @login_required
 def marca_lista(request):

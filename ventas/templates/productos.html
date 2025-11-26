@@ -1,6 +1,103 @@
 {% extends 'layout.html' %}
-{% block title %}Login{% endblock %}
+{% block title %}Productos{% endblock %}
 {% block page_title %}Productos{% endblock %}
+
 {% block content %}
-    
+
+<div class="row">
+
+    {% if mensaje_exito %}
+    <div class="col-12">
+        <div class="alert alert-success alert-dismissible fade show mt-2" role="alert">
+            <strong>Éxito:</strong> {{ mensaje_exito }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Icono + Botón superior -->
+    <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
+        <i class="bi bi-box-seam" style="font-size: 4rem; color: #202020; margin-left: 1rem;"></i>
+
+        <a href="{% url 'productos_registrar' %}" class="btn btn-primary d-flex align-items-center"
+            style="margin-right: 1rem;">
+            <i class="bi bi-plus-circle me-1" style="font-size: 1rem; color: #fff;"></i>
+            Agregar Producto
+        </a>
+    </div>
+
+    <!-- Lista de productos -->
+    <div class="col-12 mb-3">
+        <div class="card shadow-sm">
+
+            <div class="card-header d-flex justify-content-between">
+                <span>Lista de productos</span>
+                <span class="text-muted small">
+                    Total: {{ productos|length }} registro{% if productos|length != 1 %}s{% endif %}
+                </span>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Existencia</th>
+                                <th>Precio</th>
+                                <th>Marca</th>
+                                <th>Categoría</th>
+                                <th>Proveedor</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos %}
+                            <tr>
+                                <td>{{ producto.Id_Producto }}</td>
+                                <td style="white-space: normal; word-break: break-word;">
+                                    {{ producto.NombreProducto }}
+                                </td>
+                                <td style="white-space: normal; word-break: break-word;">
+                                    {{ producto.Descripcion }}
+                                </td>
+                                <td>{{ producto.Existencia }}</td>
+                                <td>C${{ producto.Precio|floatformat:2 }}</td>
+                                <td>{{ producto.Marca.NombreMarca }}</td>
+                                <td>{{ producto.Categoria.NombreCategoria }}</td>
+                                <td>{{ producto.Proveedor.NombreEmpresa }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'productos_registrar' %}?editar={{ producto.Id_Producto }}"
+                                        class="btn btn-sm btn-outline-secondary me-1">
+                                        <i class="bi bi-pencil-square me-1"></i>Editar
+                                    </a>
+                                    <form method="POST" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="eliminar_id" value="{{ producto.Id_Producto }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('¿Seguro que deseas eliminar este producto?');">
+                                            <i class="bi bi-trash3 me-1"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-3">
+                                    No hay productos registrados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
 {% endblock %}
