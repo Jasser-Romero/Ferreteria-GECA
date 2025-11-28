@@ -49,7 +49,6 @@
                                 <th>Precio</th>
                                 <th>Marca</th>
                                 <th>Categoría</th>
-                                <th>Proveedor</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -67,7 +66,6 @@
                                 <td>C${{ producto.Precio|floatformat:2 }}</td>
                                 <td>{{ producto.Marca.NombreMarca }}</td>
                                 <td>{{ producto.Categoria.NombreCategoria }}</td>
-                                <td>{{ producto.Proveedor.NombreEmpresa }}</td>
                                 <td class="text-center">
                                     <a href="{% url 'productos_registrar' %}?editar={{ producto.Id_Producto }}"
                                         class="btn btn-sm btn-outline-secondary me-1">

@@ -1,14 +1,15 @@
 from django.db import models, transaction
-from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
 from django.db.models import Sum, Q, CheckConstraint, UniqueConstraint, F
 from django.core.exceptions import ValidationError
 
 # Librerias para Manejo de Usuarios
-# from django.contrib.auth.models import AbstractUser, Group, Permission
-# from django.db.models.signals import post_migrate
-# from django.dispatch import receiver
+from django.contrib.auth.models import AbstractUser, Group
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
+from django.conf import settings
 
 # Create your models here.
 class Cliente(models.Model):
@@ -29,14 +30,6 @@ class Categoria(models.Model):
     NombreCategoria=models.CharField(max_length=50)
     Activo=models.BooleanField(default=True)
 
-class Proveedor(models.Model):
-    Id_Proveedor=models.AutoField(primary_key=True)
-    NombreEmpresa=models.CharField(max_length=50)
-    Telefono=models.CharField(max_length=8,
-        validators=[
-        RegexValidator(regex=r'^\d{8}$', message='Debe tener 8 digitos')
-        ])
-
 class Producto(models.Model):
     Id_Producto=models.AutoField(primary_key=True)
     NombreProducto=models.CharField(max_length=50)
@@ -54,7 +47,6 @@ class Producto(models.Model):
     )
     Marca = models.ForeignKey(Marca, on_delete=models.PROTECT, null=False, blank=False)
     Categoria=models.ForeignKey(Categoria, on_delete=models.PROTECT, null=False, blank=False)
-    Proveedor=models.ForeignKey(Proveedor, on_delete=models.PROTECT, null=False, blank=False)
 
     class Meta:
         constraints = [
@@ -140,130 +132,69 @@ class VentaDetalle(models.Model):
 
         self.Venta.recalcular_total(save=True)
 
-class Compra(models.Model):
-    Id_Compra=models.AutoField(primary_key=True)
-    Fecha_Compra=models.DateField(default=timezone.now)
-    Proveedor=models.ForeignKey(Proveedor,on_delete=models.PROTECT, null=False, blank=False)
-    SubTotal=models.DecimalField(max_digits=12,decimal_places=2, default=Decimal('0.00'), validators=[MinValueValidator(0)])
-    Total=models.DecimalField(max_digits=12,decimal_places=2, default=Decimal('0.00'), validators=[MinValueValidator(0)])
-
-    class Meta:
-        constraints = [
-            CheckConstraint(check=Q(SubTotal__gte=0), name='compra_subtotal_ge_0'),
-            CheckConstraint(check=Q(Total__gte=0), name='compra_total_ge_0'),
-        ]
-        ordering = ['-Fecha_Compra', '-Id_Compra']
+# Manejo de Usuarios en el Sistema (solo sección de usuarios modificada)
+class Usuario(AbstractUser):
+    ROL_CHOICES = [
+        ('admin', 'Administrador'),
+        ('vendedor', 'Vendedor'),
+    ]
+    rol = models.CharField(max_length=10, choices=ROL_CHOICES, default='vendedor')
 
     def __str__(self):
-        return f"Compra #{self.Id_Compra} ({self.Fecha_Compra})"
+        return f"{self.username} ({self.get_rol_display()})"
 
-    def recalcular_totales(self, save=True):
-        suma = self.detalles_compra.aggregate(s=Sum('SubTotalDC'))['s'] or Decimal('0.00')
-        self.SubTotal = suma
-        self.Total = self.SubTotal
-        if save:
-            self.save(update_fields=['SubTotal', 'Total'])
 
-class CompraDetalle(models.Model):
-    Compra = models.ForeignKey(Compra, on_delete=models.CASCADE, related_name='detalles_compra')
-    Producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='detalles_compra')
+class TemplateResource(models.Model):
+    """Representa un recurso/plantilla al que se puede dar acceso por grupo o usuario.
 
-    CantidadC = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(999999)])
-    PrecioC   = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
-    SubTotalDC= models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
-
-    class Meta:
-        constraints = [
-            UniqueConstraint(fields=['Compra', 'Producto'], name='compra_producto_unico'),
-            CheckConstraint(check=Q(CantidadC__gte=1), name='compra_det_cantidad_ge_1'),
-            CheckConstraint(check=Q(PrecioC__gte=0), name='compra_det_precio_ge_0'),
-            CheckConstraint(check=Q(SubTotalDC__gte=0), name='compra_det_subtotal_ge_0'),
-        ]
+    - codename: identificador único
+    - nombre: etiqueta legible
+    - groups: grupos que tienen acceso
+    - users: excepciones de usuarios con acceso directo
+    """
+    codename = models.CharField(max_length=100, unique=True)
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True)
+    groups = models.ManyToManyField(Group, blank=True, related_name='template_resources')
+    users = models.ManyToManyField('Usuario', blank=True, related_name='template_resources')
 
     def __str__(self):
-        return f"{self.Producto.NombreProducto} x {self.CantidadC}"
+        return f"{self.nombre} ({self.codename})"
 
-    @transaction.atomic
-    def save(self, *args, **kwargs):
-        self.SubTotalDC = (Decimal(self.CantidadC) * self.PrecioC).quantize(Decimal('0.01'))
 
-        old = None
-        if self.pk:
-            old = type(self).objects.select_related('Producto').get(pk=self.pk)
+# --- Creación automática de grupos y usuarios al migrar---
+@receiver(post_migrate)
+def crear_grupos_y_usuarios(sender, **kwargs):
+    # Se ejecuta para la app de 'ventas' 
+    if sender.label != 'ventas':
+        return
 
-        super().save(*args, **kwargs)
+    admin_group, _ = Group.objects.get_or_create(name='Administrador')
+    vendedor_group, _ = Group.objects.get_or_create(name='Vendedor')
 
-        if old is None:
-            prod = Producto.objects.select_for_update().get(pk=self.Producto_id)
-            Producto.objects.filter(pk=prod.pk).update(Existencia=F('Existencia') + self.CantidadC)
-        else:
-            if old.Producto_id != self.Producto_id:
-                prod_old = Producto.objects.select_for_update().get(pk=old.Producto_id)
-                if (prod_old.Existencia or 0) - old.CantidadC < 0:
-                    raise ValidationError("No hay stock suficiente para revertir en el producto anterior.")
-                Producto.objects.filter(pk=prod_old.pk).update(Existencia=F('Existencia') - old.CantidadC)
+    from django.contrib.auth import get_user_model
+    UsuarioModel = get_user_model()
 
-                prod_new = Producto.objects.select_for_update().get(pk=self.Producto_id)
-                Producto.objects.filter(pk=prod_new.pk).update(Existencia=F('Existencia') + self.CantidadC)
-            else:
-                delta = self.CantidadC - old.CantidadC
-                if delta != 0:
-                    prod = Producto.objects.select_for_update().get(pk=self.Producto_id)
-                    if delta < 0 and (prod.Existencia or 0) + delta < 0:
-                        raise ValidationError("No hay stock suficiente para disminuir la cantidad comprada.")
-                    Producto.objects.filter(pk=prod.pk).update(Existencia=F('Existencia') + delta)
+    # Usuarios del Sistema
+    for username, password in [('GermanB', 'Admin123+'), ('CarmenB', 'Admin123+')]:
+        if not UsuarioModel.objects.filter(username=username).exists():
+            user = UsuarioModel.objects.create_superuser(
+                username=username,
+                password=password,
+                email=f'{username.lower()}@correo.com',
+                rol='admin',
+                is_staff=True,
+                is_superuser=True
+            )
+            user.groups.add(admin_group)
 
-        self.Compra.recalcular_totales(save=True)
-        
-#todo: esta logica se hara después de la migracion del modelo de la bd
-#Manejo de Usuarios en el Sistema
-# class Usuario(AbstractUser):
-#     ROL_CHOICES = [
-#         ('admin', 'Administrador'),
-#         ('vendedor', 'Vendedor'),
-#     ]
-#     rol = models.CharField(max_length=10, choices=ROL_CHOICES, default='vendedor')
-
-#     def __str__(self):
-#         return f"{self.username} ({self.get_rol_display()})"
-    
-# # --- Creación automática de grupos y usuarios al migrar ---
-# @receiver(post_migrate)
-# def crear_grupos_y_usuarios(sender, **kwargs):
-#     """
-#     Crea los grupos (Administrador y Vendedor) y los usuarios iniciales si no existen.
-#     Se ejecuta automáticamente después de cada migrate.
-#     """
-#     if sender.label != 'ventas':  
-#         # Crear grupos
-#         admin_group, _ = Group.objects.get_or_create(name='Administrador')
-#         vendedor_group, _ = Group.objects.get_or_create(name='Vendedor')
-
-#         # Crear usuarios administrador
-#         for username, password in [('GermanB', 'Admin123+'), ('CarmenB', 'Admin123+')]:
-#             if not Usuario.objects.filter(username=username).exists():
-#                 user = Usuario.objects.create_superuser(
-#                     username=username,
-#                     password=password,
-#                     email=f'{username.lower()}@correo.com',
-#                     rol='admin',
-#                     is_staff=True,
-#                     is_superuser=True
-#                 )
-#                 user.groups.add(admin_group)
-#                 print(f"Usuario administrador creado: {username}")
-
-#         # Crear usuario vendedor
-#         if not Usuario.objects.filter(username='JaysonH').exists():
-#             vendedor = Usuario.objects.create_user(
-#                 username='JaysonH',
-#                 password='Vendedor123+',
-#                 email='jaysonH@correo.com',
-#                 rol='vendedor',
-#                 is_staff=False,
-#                 is_superuser=False
-#             )
-#             vendedor.groups.add(vendedor_group)
-#             print("Usuario vendedor creado: JaysonH")
-
-# todo: agregar los permisos de tablas a los grupos de usuarios (admin, vendedor)
+    if not UsuarioModel.objects.filter(username='JuanP').exists():
+        vendedor = UsuarioModel.objects.create_user(
+            username='JuanP',
+            password='Vendedor123+',
+            email='juanP@correo.com',
+            rol='vendedor',
+            is_staff=False,
+            is_superuser=False
+        )
+        vendedor.groups.add(vendedor_group)

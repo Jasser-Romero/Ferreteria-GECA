@@ -12,7 +12,6 @@ urlpatterns = [
     path("productos/registrar/", views.productos_registrar, name="productos_registrar"),
     path("productos/marcas/", views.marca_lista, name="marca_lista"),
     path("productos/categorias/", views.categoria_lista, name="categoria_lista"),
-    path("proveedores/", views.proveedores_lista, name="proveedores_lista"),
     path("clientes/", views.clientes_lista, name="clientes_lista"),
     path('clientes/registrar/', views.clientes_registrar, name='clientes_registrar'),
     path("ventas/", views.ventas_lista, name="ventas_lista"),

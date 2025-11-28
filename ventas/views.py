@@ -1,14 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, HttpResponseRedirect
-from django.urls import reverse
-from django.utils.http import urlencode
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 
-from .models import Cliente, Proveedor, Marca, Categoria, Producto
+from .models import Cliente, Marca, Categoria, Producto
 
 
 # Create your views here.
@@ -18,7 +15,11 @@ def index(request):
 
 def user_login(request):
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        # Redirigir según rol
+        if request.user.is_superuser:
+            return redirect('dashboard')
+        else:
+            return redirect('productos_lista')
 
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -29,7 +30,13 @@ def user_login(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Bienvenido {username}')
-                return redirect('dashboard')
+
+                # REDIRECCIÓN SEGÚN ROL
+                if user.is_superuser:
+                    return redirect('dashboard')
+                else:
+                    return redirect('productos_lista')
+
             else:
                 messages.error(request, 'Usuario o contraseña incorrectos')
         else:
@@ -65,7 +72,7 @@ def productos_lista(request):
     # Obtener todos los productos ordenados
     productos = (
         Producto.objects
-        .select_related("Marca", "Categoria", "Proveedor")
+        .select_related("Marca", "Categoria")
         .order_by("Id_Producto")
     )
 
@@ -89,16 +96,14 @@ def productos_registrar(request):
         precio = request.POST.get("Precio")
         marca_id = request.POST.get("Marca")
         categoria_id = request.POST.get("Categoria")
-        proveedor_id = request.POST.get("Proveedor")
 
         # Validación básica por si acaso (además de la del front)
-        if not (nombre and descripcion and existencia and precio and marca_id and categoria_id and proveedor_id):
+        if not (nombre and descripcion and existencia and precio and marca_id and categoria_id):
             # NO usamos mensaje_exito / mensaje_error aquí
             return render(request, "productos_registrar.html", {
                 "producto": producto,
                 "marcas": Marca.objects.filter(Activo=True),
                 "categorias": Categoria.objects.filter(Activo=True),
-                "proveedores": Proveedor.objects.all(),
             })
 
         if producto:
@@ -109,7 +114,6 @@ def productos_registrar(request):
             producto.Precio = precio
             producto.Marca_id = marca_id
             producto.Categoria_id = categoria_id
-            producto.Proveedor_id = proveedor_id
             producto.save()
 
             # Guardar mensaje de éxito en sesión
@@ -123,7 +127,6 @@ def productos_registrar(request):
                 Precio=precio,
                 Marca_id=marca_id,
                 Categoria_id=categoria_id,
-                Proveedor_id=proveedor_id
             )
 
             request.session['mensaje_exito'] = "Producto creado correctamente."
@@ -136,7 +139,6 @@ def productos_registrar(request):
         "producto": producto,
         "marcas": Marca.objects.filter(Activo=True),
         "categorias": Categoria.objects.filter(Activo=True),
-        "proveedores": Proveedor.objects.all(),
     })
 
 
@@ -249,78 +251,6 @@ def categoria_lista(request):
     }
     return render(request, "categorias.html", context)
 
-
-class ProveedorForm(forms.ModelForm):
-    class Meta:
-        model = Proveedor
-        fields = ['NombreEmpresa', 'Telefono']
-        widgets = {
-            'NombreEmpresa': forms.TextInput(attrs={
-                'class': 'form-control',
-                'required': True
-            }),
-            'Telefono': forms.TextInput(attrs={
-                'class': 'form-control',
-                'maxlength': '8',
-                'required': True
-            }),
-        }
-        labels = {
-            'NombreEmpresa': 'Nombre de la empresa',
-            'Telefono': 'Teléfono',
-        }
-
-
-@login_required
-def proveedores_lista(request):
-    proveedores = Proveedor.objects.all().order_by('Id_Proveedor')
-    proveedor_edit = None
-    edit_mode = False
-
-    # ELIMINAR
-    if request.method == 'POST' and 'eliminar_id' in request.POST:
-        proveedor = get_object_or_404(Proveedor, pk=request.POST.get('eliminar_id'))
-        proveedor.delete()
-        messages.success(request, 'Proveedor eliminado correctamente.')
-        return redirect('proveedores_lista')
-
-    # CREAR / ACTUALIZAR
-    if request.method == 'POST':
-        proveedor_id = request.POST.get('proveedor_id')
-
-        if proveedor_id:
-            proveedor_edit = get_object_or_404(Proveedor, pk=proveedor_id)
-            form = ProveedorForm(request.POST, instance=proveedor_edit)
-            edit_mode = True
-        else:
-            form = ProveedorForm(request.POST)
-
-        if form.is_valid():
-            form.save()
-            if edit_mode:
-                messages.success(request, 'Proveedor actualizado correctamente.')
-            else:
-                messages.success(request, 'Proveedor creado correctamente.')
-            return redirect('proveedores_lista')
-        else:
-            messages.error(request, 'Por favor corrige los errores del formulario.')
-    else:
-        editar_id = request.GET.get('editar')
-        if editar_id:
-            proveedor_edit = get_object_or_404(Proveedor, pk=editar_id)
-            form = ProveedorForm(instance=proveedor_edit)
-            edit_mode = True
-        else:
-            form = ProveedorForm()
-
-    context = {
-        'form': form,
-        'proveedores': proveedores,
-        'edit_mode': edit_mode,
-        'proveedor_edit': proveedor_edit,
-    }
-    return render(request, "proveedores.html", context)
-
 @login_required
 def clientes_lista(request):
     return render(request, "clientes.html")
@@ -428,4 +358,3 @@ def clientes_registrar(request):
         'cliente_edit': cliente_edit,
     }
     return render(request, 'clientes_registrar.html', context)
-
