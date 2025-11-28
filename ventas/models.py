@@ -20,6 +20,9 @@ class Cliente(models.Model):
     SegundoApellido=models.CharField(max_length=50)
     Activo=models.BooleanField(default=True)
 
+    def __str__(self):
+        return f"{self.PrimerNombre} {self.PrimerApellido}".strip()
+
 class Marca(models.Model):
     Id_Marca=models.AutoField(primary_key=True)
     NombreMarca=models.CharField(max_length=50)
@@ -52,6 +55,9 @@ class Producto(models.Model):
         constraints = [
             CheckConstraint(check=Q(Existencia__gte=0), name='producto_existencia_ge_0'),
         ]
+    
+    def __str__(self):
+        return self.NombreProducto
 
 class Venta(models.Model):
     Id_Venta=models.AutoField(primary_key=True)

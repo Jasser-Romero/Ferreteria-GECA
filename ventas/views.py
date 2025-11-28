@@ -4,8 +4,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
+from django.forms import formset_factory, ModelForm
+from django.db import transaction, IntegrityError, models
+from django.core.exceptions import ValidationError
+from django.db.models import Sum, F, Value
+from django.db.models.functions import Coalesce
 
-from .models import Cliente, Marca, Categoria, Producto
+from .models import Cliente, Marca, Categoria, Producto, Venta, VentaDetalle
 
 
 # Create your views here.
@@ -358,3 +363,115 @@ def clientes_registrar(request):
         'cliente_edit': cliente_edit,
     }
     return render(request, 'clientes_registrar.html', context)
+
+class VentaForm(ModelForm):
+    class Meta:
+        model = Venta
+        fields = ['Cliente']
+        widgets = {
+            'Cliente': forms.Select(attrs={'class': 'form-select select2'}),
+        }
+
+
+
+class DetalleVentaForm(ModelForm):
+    class Meta:
+        model = VentaDetalle
+        fields = ['Producto', 'CantidadVendida']
+        widgets = {
+            'Producto': forms.Select(attrs={'class': 'form-select select2'}),
+            'CantidadVendida': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+@login_required
+def ventas_registrar(request):
+    DetalleFormSet = formset_factory(DetalleVentaForm, extra=1)
+    clientes = Cliente.objects.filter(Activo=True)
+    productos = Producto.objects.all()
+
+    if request.method == "POST":
+        venta_form = VentaForm(request.POST)
+        detalle_formset = DetalleFormSet(request.POST)
+
+        venta_form.fields["Cliente"].queryset = clientes
+        for form in detalle_formset:
+            form.fields["Producto"].queryset = productos
+
+        if venta_form.is_valid() and detalle_formset.is_valid():
+            detalles_data = []
+            for form in detalle_formset:
+                if form.cleaned_data:
+                    prod = form.cleaned_data["Producto"]
+                    qty = form.cleaned_data["CantidadVendida"]
+                    if prod.Existencia < qty:
+                        messages.error(request, f"No hay stock suficiente para {prod.NombreProducto}. Stock actual: {prod.Existencia}")
+                        return render(request, "ventas_registrar.html", {
+                            "venta_form": venta_form,
+                            "detalle_formset": detalle_formset,
+                            "clientes": clientes,
+                            "productos": productos,
+                        })
+                    detalles_data.append((prod, qty))
+
+            try:
+                with transaction.atomic():
+                    venta = venta_form.save()
+                    for prod, qty in detalles_data:
+                        detalle = VentaDetalle(
+                            Venta=venta,
+                            Producto=prod,
+                            CantidadVendida=qty,
+                            PrecioUnitario=prod.Precio
+                        )
+                        detalle.save()
+                messages.success(request, "Venta registrada correctamente.")
+                return redirect("ventas_lista")
+            except ValidationError as e:
+                messages.error(request, f"Error al registrar la venta: {e}")
+                return render(request, "ventas_registrar.html", {
+                    "venta_form": venta_form,
+                    "detalle_formset": detalle_formset,
+                    "clientes": clientes,
+                    "productos": productos,
+                })
+        else:
+            messages.error(request, "Por favor corrige los errores del formulario.")
+
+    else:
+        venta_form = VentaForm()
+        detalle_formset = DetalleFormSet()
+        venta_form.fields["Cliente"].queryset = clientes
+        for form in detalle_formset:
+            form.fields["Producto"].queryset = productos
+
+    return render(request, "ventas_registrar.html", {
+        "venta_form": venta_form,
+        "detalle_formset": detalle_formset,
+        "clientes": clientes,
+        "productos": productos,
+    })
+
+@login_required
+def ventas_lista(request):
+    ventas = Venta.objects.select_related('Cliente').annotate(
+        total_calculado=Coalesce(
+            Sum(F('detalles__CantidadVendida') * F('detalles__PrecioUnitario')),
+            Value(0.00),
+            output_field=models.DecimalField(max_digits=12, decimal_places=2) 
+        )
+    ).order_by('-Id_Venta')
+
+    return render(request, "ventas.html", {
+        "ventas": ventas
+    })
+
+@login_required
+def ventas_detalle(request, pk):
+    venta = get_object_or_404(Venta, pk=pk)
+    
+    detalles = venta.detalles.select_related('Producto').all()
+
+    return render(request, "ventas_detalle.html", {
+        "venta": venta,
+        "detalles": detalles
+    })

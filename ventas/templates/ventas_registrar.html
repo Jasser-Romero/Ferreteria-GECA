@@ -1,0 +1,225 @@
+{% extends 'layout.html' %}
+{% load static %}
+
+{% block title %}Registrar Venta{% endblock %}
+{% block page_title %}Registrar nueva venta{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+  .select2-container .select2-selection--single {
+    height: 38px !important;
+    padding: 5px 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+    top: 1px;
+    right: 3px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 26px;
+    padding-left: 0;
+  }
+  .select2-results__option[aria-disabled="true"] {
+      background-color: #f8f9fa;
+      color: #6c757d;
+      opacity: 0.8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Registrar nueva venta</span>
+    <a href="{% url 'ventas_lista' %}" class="btn btn-sm btn-outline-secondary">Volver</a>
+  </div>
+
+  <div class="card-body">
+    <form method="POST" id="ventaForm" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4 col-md-4">
+        <label class="form-label">Cliente</label>
+        <select name="Cliente" class="form-select select2" required>
+          <option value="">Seleccione...</option>
+          {% for cliente in clientes %}
+            <option value="{{ cliente.Id_Cliente }}">
+              {{ cliente.PrimerNombre }}{% if cliente.SegundoNombre %} {{ cliente.SegundoNombre }}{% endif %}
+              {{ cliente.PrimerApellido }}{% if cliente.SegundoApellido %} {{ cliente.SegundoApellido }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <div class="invalid-feedback">
+          Seleccione un cliente.
+        </div>
+      </div>
+
+      <hr>
+      
+      <div id="productos-container">
+        {{ detalle_formset.management_form }}
+        
+        {% for form in detalle_formset %}
+          <div class="row g-3 mb-3 detalle-item">
+            
+            <div class="col-md-6">
+              <label for="{{ form.Producto.id_for_label }}" class="form-label">Producto</label>
+              {{ form.Producto }}
+              {% if form.Producto.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.Producto.errors }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <label for="{{ form.CantidadVendida.id_for_label }}" class="form-label">Cantidad</label>
+              {{ form.CantidadVendida }}
+              {% if form.CantidadVendida.errors %}
+                <div class="invalid-feedback d-block">
+                  {{ form.CantidadVendida.errors }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-2">
+              <label class="form-label d-block">&nbsp;</label>
+              <div class="d-grid">
+                <button type="button" class="btn btn-danger eliminar-detalle" aria-label="Eliminar producto">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
+            </div>
+
+            {{ form.id }} {# campo oculto del formset #}
+          </div>
+        {% endfor %}
+      </div>
+
+      <button type="button" id="add-producto" class="btn btn-secondary mt-2">
+        <i class="bi bi-plus-circle"></i> Agregar producto
+      </button>
+
+      <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary">Guardar Venta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# PLANTILLA HIDDEN — para clonar filas nuevas #}
+<div id="empty-form-template" style="display: none;">
+  <div class="row g-3 mb-3 detalle-item">
+    <div class="col-md-6">
+      <label class="form-label">Producto</label>
+      <select class="form-select select2" name="form-__prefix__-Producto">
+        <option value="">Seleccione...</option>
+        {% for p in productos %}
+          <option value="{{ p.Id_Producto }}">{{ p.NombreProducto }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Cantidad</label>
+      <input type="number" name="form-__prefix__-CantidadVendida" class="form-control" min="1">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label d-block">&nbsp;</label>
+      <div class="d-grid">
+        <button type="button" class="btn btn-danger eliminar-detalle" aria-label="Eliminar producto">
+          <i class="bi bi-x-circle"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+
+  function initSelect2(context) {
+    $(context).find("select.select2").select2({
+      width: "100%",
+      placeholder: "Seleccione...",
+      allowClear: true,
+      language: "es" 
+    });
+  }
+
+  function actualizarOpcionesDisponibles() {
+    let seleccionados = [];
+    
+    $('#productos-container .detalle-item select.select2').each(function() {
+      let valor = $(this).val();
+      if (valor) {
+        seleccionados.push(valor);
+      }
+    });
+
+    $('#productos-container .detalle-item select.select2').each(function() {
+      let selectActual = $(this);
+      let valorActual = selectActual.val();
+
+      selectActual.find('option').each(function() {
+        let option = $(this);
+        let optionVal = option.val();
+
+        if (!optionVal) return; 
+
+        if (seleccionados.includes(optionVal) && optionVal !== valorActual) {
+            option.prop('disabled', true);
+        } else {
+            option.prop('disabled', false);
+        }
+      });
+      
+    });
+  }
+
+  initSelect2($("#ventaForm"));
+  actualizarOpcionesDisponibles();
+
+  $("#add-producto").click(function() {
+    let formCount = parseInt($("#id_form-TOTAL_FORMS").val());
+    
+    let newForm = $("#empty-form-template .detalle-item").clone();
+
+    newForm.find('.select2-container').remove(); 
+    newForm.find('select').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').show();
+
+    newForm.html(newForm.html().replace(/__prefix__/g, formCount));
+
+    $("#productos-container").append(newForm);
+    $("#id_form-TOTAL_FORMS").val(formCount + 1);
+
+    initSelect2(newForm);
+    
+    actualizarOpcionesDisponibles();
+  });
+
+  $(document).on("click", ".eliminar-detalle", function() {
+    let visibleItems = $("#productos-container .detalle-item").length;
+    
+    if (visibleItems > 1) {
+      $(this).closest(".detalle-item").remove();
+      setTimeout(actualizarOpcionesDisponibles, 50);
+    } else {
+      alert("Debe existir al menos un producto en la venta.");
+    }
+  });
+
+  $(document).on('change', '.detalle-item select.select2', function() {
+      actualizarOpcionesDisponibles();
+  });
+
+});
+</script>
+{% endblock %}
