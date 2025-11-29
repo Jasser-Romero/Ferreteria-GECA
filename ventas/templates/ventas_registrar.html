@@ -160,22 +160,23 @@ $(document).ready(function() {
     $('#id_form-TOTAL_FORMS').val(filas.length);
 
     filas.each(function(index) {
-        // Dentro de cada fila, buscamos inputs y selects
         $(this).find(':input, label').each(function() {
             let name = $(this).attr('name');
             let id = $(this).attr('id');
             let forLabel = $(this).attr('for');
 
+            let regex = /form-(?:\d+|__prefix__)-/;
+
             if (name) {
-                let newName = name.replace(/form-\d+-/, 'form-' + index + '-');
+                let newName = name.replace(regex, 'form-' + index + '-');
                 $(this).attr('name', newName);
             }
             if (id) {
-                let newId = id.replace(/form-\d+-/, 'form-' + index + '-');
+                let newId = id.replace(regex, 'form-' + index + '-');
                 $(this).attr('id', newId);
             }
             if (forLabel) {
-                let newFor = forLabel.replace(/form-\d+-/, 'form-' + index + '-');
+                let newFor = forLabel.replace(regex, 'form-' + index + '-');
                 $(this).attr('for', newFor);
             }
         });
@@ -209,7 +210,6 @@ $(document).ready(function() {
   initSelect2($("#ventaForm"));
   actualizarOpcionesDisponibles();
 
-
   $("#add-producto").click(function() {
     let newForm = $("#empty-form-template .detalle-item").clone();
     
@@ -224,21 +224,17 @@ $(document).ready(function() {
     actualizarOpcionesDisponibles();
   });
 
-
   $(document).on("click", ".eliminar-detalle", function() {
     let visibleItems = $("#productos-container .detalle-item").length;
     
     if (visibleItems > 1) {
       $(this).closest(".detalle-item").remove();
-      
-      actualizarIndices();
-      
+      actualizarIndices(); 
       actualizarOpcionesDisponibles();
     } else {
       alert("Debe existir al menos un producto en la venta.");
     }
   });
-
 
   $(document).on('change', '.detalle-item select.select2', function() {
       actualizarOpcionesDisponibles();
