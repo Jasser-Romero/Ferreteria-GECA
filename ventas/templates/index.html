@@ -1,5 +1,202 @@
 {% extends 'layout.html' %}
-{% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% load humanize %}
+
+{% block title %}Dashboard Principal{% endblock %}
+{% block page_title %}Panel de Control{% endblock %}
+
 {% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-4 border-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1">Ventas Hoy</h6>
+                        <h4 class="fw-bold mb-0">${{ ventas_hoy|intcomma }}</h4>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-currency-dollar text-primary fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-4 border-success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1">Acumulado Mes</h6>
+                        <h4 class="fw-bold mb-0">${{ ventas_mes|intcomma }}</h4>
+                    </div>
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-graph-up-arrow text-success fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-4 border-danger h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1">Stock Bajo</h6>
+                        <h4 class="fw-bold mb-0">{{ productos_bajo_stock }}</h4>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+                    </div>
+                </div>
+                <small class="text-danger mt-2 d-block" style="font-size: 0.8rem;">Productos con < 10 u.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-4 border-info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-1">Clientes Activos</h6>
+                        <h4 class="fw-bold mb-0">{{ clientes_activos }}</h4>
+                    </div>
+                    <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+                        <i class="bi bi-people text-info fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Ventas últimos 7 días</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartVentas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Top 5 Productos</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartProductos"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Últimas Ventas Registradas</h6>
+                <a href="{% url 'ventas_lista' %}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th># ID</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venta in ultimas_ventas %}
+                            <tr>
+                                <td>{{ venta.Id_Venta }}</td>
+                                <td>{{ venta.Fecha_Venta|date:"d/m/Y" }}</td>
+                                <td>{{ venta.Cliente.PrimerNombre }} {{ venta.Cliente.PrimerApellido }}</td>
+                                <td class="text-end fw-bold text-success">${{ venta.Total|intcomma }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'ventas_detalle' venta.Id_Venta %}" class="btn btn-sm btn-light">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-3">No hay ventas recientes.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ fechas_grafico|json_script:"fechas-data" }}
+{{ montos_grafico|json_script:"montos-data" }}
+{{ labels_productos|json_script:"prod-labels-data" }}
+{{ data_productos|json_script:"prod-values-data" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fechas = JSON.parse(document.getElementById('fechas-data').textContent);
+        const montos = JSON.parse(document.getElementById('montos-data').textContent);
+        const prodLabels = JSON.parse(document.getElementById('prod-labels-data').textContent);
+        const prodData = JSON.parse(document.getElementById('prod-values-data').textContent);
+
+        const ctxVentas = document.getElementById('chartVentas').getContext('2d');
+        new Chart(ctxVentas, {
+            type: 'bar',
+            data: {
+                labels: fechas, 
+                datasets: [{
+                    label: 'Ventas ($)',
+                    data: montos, 
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        const ctxProd = document.getElementById('chartProductos').getContext('2d');
+        new Chart(ctxProd, {
+            type: 'doughnut',
+            data: {
+                labels: prodLabels,
+                datasets: [{
+                    data: prodData,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}

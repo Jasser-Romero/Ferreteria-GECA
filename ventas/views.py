@@ -7,17 +7,15 @@ from django import forms
 from django.forms import formset_factory, ModelForm
 from django.db import transaction, IntegrityError, models
 from django.core.exceptions import ValidationError
-from django.db.models import Sum, F, Value
+from django.db.models import Sum, F, Value, Count
 from django.db.models.functions import Coalesce
+from datetime import timedelta
+from django.utils import timezone
 
 from .models import Cliente, Marca, Categoria, Producto, Venta, VentaDetalle
 
 
 # Create your views here.
-@login_required
-def index(request):
-    return render(request, 'index.html')
-
 def user_login(request):
     if request.user.is_authenticated:
         # Redirigir según rol
@@ -475,3 +473,60 @@ def ventas_detalle(request, pk):
         "venta": venta,
         "detalles": detalles
     })
+
+@login_required
+def dashboard(request):
+    hoy = timezone.now().date()
+    inicio_mes = hoy.replace(day=1)
+    hace_7_dias = hoy - timedelta(days=7)
+    
+    # 1. Ventas de Hoy
+    ventas_hoy = Venta.objects.filter(Fecha_Venta=hoy).aggregate(total=Sum('Total'))['total'] or 0
+    
+    # 2. Ventas del Mes
+    ventas_mes = Venta.objects.filter(Fecha_Venta__gte=inicio_mes).aggregate(total=Sum('Total'))['total'] or 0
+    
+    # 3. Productos con Stock Crítico (Menos de 10 unidades)
+    productos_bajo_stock = Producto.objects.filter(Existencia__lte=10).count()
+    
+    # 4. Total de Clientes Activos
+    clientes_activos = Cliente.objects.filter(Activo=True).count()
+
+    fechas_grafico = []
+    montos_grafico = []
+
+    for i in range(6, -1, -1):
+        fecha = hoy - timedelta(days=i)
+        venta_dia = Venta.objects.filter(Fecha_Venta=fecha).aggregate(total=Sum('Total'))['total'] or 0
+        fechas_grafico.append(fecha.strftime('%d/%m'))
+        montos_grafico.append(float(venta_dia))
+
+    top_productos_query = (
+        VentaDetalle.objects
+        .values('Producto__NombreProducto')
+        .annotate(total_vendido=Sum('CantidadVendida'))
+        .order_by('-total_vendido')[:5]
+    )
+
+    labels_productos = []
+    data_productos = []
+    
+    for item in top_productos_query:
+        labels_productos.append(item['Producto__NombreProducto'])
+        data_productos.append(item['total_vendido'])
+
+    ultimas_ventas = Venta.objects.select_related('Cliente').order_by('-Id_Venta')[:5]
+
+    context = {
+        'ventas_hoy': ventas_hoy,
+        'ventas_mes': ventas_mes,
+        'productos_bajo_stock': productos_bajo_stock,
+        'clientes_activos': clientes_activos,
+        'fechas_grafico': fechas_grafico,
+        'montos_grafico': montos_grafico,
+        'labels_productos': labels_productos,
+        'data_productos': data_productos,
+        'ultimas_ventas': ultimas_ventas
+    }
+
+    return render(request, 'index.html', context)

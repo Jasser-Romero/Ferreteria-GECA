@@ -150,71 +150,95 @@ $(document).ready(function() {
       width: "100%",
       placeholder: "Seleccione...",
       allowClear: true,
-      language: "es" 
+      language: "es"
+    });
+  }
+
+  function actualizarIndices() {
+    let filas = $('#productos-container .detalle-item');
+    
+    $('#id_form-TOTAL_FORMS').val(filas.length);
+
+    filas.each(function(index) {
+        // Dentro de cada fila, buscamos inputs y selects
+        $(this).find(':input, label').each(function() {
+            let name = $(this).attr('name');
+            let id = $(this).attr('id');
+            let forLabel = $(this).attr('for');
+
+            if (name) {
+                let newName = name.replace(/form-\d+-/, 'form-' + index + '-');
+                $(this).attr('name', newName);
+            }
+            if (id) {
+                let newId = id.replace(/form-\d+-/, 'form-' + index + '-');
+                $(this).attr('id', newId);
+            }
+            if (forLabel) {
+                let newFor = forLabel.replace(/form-\d+-/, 'form-' + index + '-');
+                $(this).attr('for', newFor);
+            }
+        });
     });
   }
 
   function actualizarOpcionesDisponibles() {
     let seleccionados = [];
-    
     $('#productos-container .detalle-item select.select2').each(function() {
       let valor = $(this).val();
-      if (valor) {
-        seleccionados.push(valor);
-      }
+      if (valor) seleccionados.push(valor);
     });
 
     $('#productos-container .detalle-item select.select2').each(function() {
       let selectActual = $(this);
       let valorActual = selectActual.val();
-
       selectActual.find('option').each(function() {
         let option = $(this);
         let optionVal = option.val();
-
-        if (!optionVal) return; 
-
+        if (!optionVal) return;
+        
         if (seleccionados.includes(optionVal) && optionVal !== valorActual) {
             option.prop('disabled', true);
         } else {
             option.prop('disabled', false);
         }
       });
-      
     });
   }
 
   initSelect2($("#ventaForm"));
   actualizarOpcionesDisponibles();
 
-  $("#add-producto").click(function() {
-    let formCount = parseInt($("#id_form-TOTAL_FORMS").val());
-    
-    let newForm = $("#empty-form-template .detalle-item").clone();
 
+  $("#add-producto").click(function() {
+    let newForm = $("#empty-form-template .detalle-item").clone();
+    
     newForm.find('.select2-container').remove(); 
     newForm.find('select').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').show();
 
-    newForm.html(newForm.html().replace(/__prefix__/g, formCount));
-
     $("#productos-container").append(newForm);
-    $("#id_form-TOTAL_FORMS").val(formCount + 1);
+
+    actualizarIndices();
 
     initSelect2(newForm);
-    
     actualizarOpcionesDisponibles();
   });
+
 
   $(document).on("click", ".eliminar-detalle", function() {
     let visibleItems = $("#productos-container .detalle-item").length;
     
     if (visibleItems > 1) {
       $(this).closest(".detalle-item").remove();
-      setTimeout(actualizarOpcionesDisponibles, 50);
+      
+      actualizarIndices();
+      
+      actualizarOpcionesDisponibles();
     } else {
       alert("Debe existir al menos un producto en la venta.");
     }
   });
+
 
   $(document).on('change', '.detalle-item select.select2', function() {
       actualizarOpcionesDisponibles();
